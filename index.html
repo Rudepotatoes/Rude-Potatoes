@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Rude Potatoes - The List</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        body { font-family: 'Arial', sans-serif; background: #f4f4f4; padding: 20px; }
+        h1 { text-align: center; color: #333; text-transform: uppercase; letter-spacing: 2px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
+        .card { background: white; border-radius: 12px; padding: 20px; shadow: 0 4px 6px rgba(0,0,0,0.1); border-left: 5px solid #ffcc00; position: relative; transition: transform 0.2s; }
+        .card:hover { transform: translateY(-5px); }
+        .score { position: absolute; top: 15px; right: 15px; background: #333; color: white; padding: 5px 10px; border-radius: 20px; font-weight: bold; }
+        .name { font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; display: block; width: 80%; }
+        .address { color: #666; font-size: 0.9rem; margin-bottom: 15px; display: block; }
+        .links a { text-decoration: none; font-size: 0.8rem; background: #e1306c; color: white; padding: 5px 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+    <h1>🍟 Rude Potatoes: The Ultimate List</h1>
+    <div id="potato-grid" class="grid">Cargando las mejores patatas...</div>
+
+    <script>
+        const csvUrl = 'https://raw.githubusercontent.com/Rudepotatoes/Rudepotatoes/main/Rude%20Potatoes_%20The%20Ultimate%20List%20-%20Hoja%201.csv';
+
+        Papa.parse(csvUrl, {
+            download: true,
+            header: true,
+            complete: function(results) {
+                const container = document.getElementById('potato-grid');
+                container.innerHTML = ''; // Limpiar mensaje de carga
+
+                results.data.forEach(row => {
+                    if(row.Name) { // Evitar filas vacías
+                        const card = `
+                            <div class="card">
+                                <span class="score">${row.Score}</span>
+                                <span class="name">${row.Name}</span>
+                                <span class="address">📍 ${row.Address}</span>
+                                <div class="links">
+                                    <a href="${row.Instagram}" target="_blank">Ver en Instagram</a>
+                                </div>
+                            </div>
+                        `;
+                        container.innerHTML += card;
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
