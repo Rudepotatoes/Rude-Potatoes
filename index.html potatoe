@@ -1,0 +1,91 @@
+<script>
+    const csvUrl = 'https://raw.githubusercontent.com/Rudepotatoes/Rudepotatoes/main/Rude%20Potatoes_%20The%20Ultimate%20List%20-%20Hoja%201.csv';
+    let allData = [];
+    let map;
+    let markers = [];
+
+    // 1. Crear el icono personalizado de Patatas Fritas
+    const potatoIcon = L.icon({
+        iconUrl: 'https://cdn-icons-png.flaticon.com/512/1046/1046786.png', // Icono de patatas
+        iconSize: [35, 35], // Tamaño del icono
+        iconAnchor: [17, 34], // Punto del icono que corresponde a la ubicación
+        popupAnchor: [0, -34] // Punto desde donde se abre el bocadillo
+    });
+
+    // 2. Inicializar Mapa (Dark Mode)
+    map = L.map('map').setView([41.388, 2.170], 13);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '© Rude Potatoes'
+    }).addTo(map);
+
+    // 3. Cargar CSV y procesar
+    Papa.parse(csvUrl, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+            allData = results.data
+                .filter(row => row.Name && row.Score) // Filtrar filas vacías
+                .map(row => {
+                    // Limpiar coordenadas (Coma -> Punto)
+                    const lat = parseFloat(String(row.Latitude).replace(',', '.'));
+                    const lng = parseFloat(String(row.Longitude).replace(',', '.'));
+                    // Limpiar nota (Coma -> Punto para poder ordenar)
+                    const score = parseFloat(String(row.Score).replace(',', '.'));
+                    
+                    return { ...row, Latitude: lat, Longitude: lng, Score: score };
+                })
+                .filter(row => !isNaN(row.Latitude));
+
+            // ORDENAR: De mayor nota a menor nota automáticamente
+            allData.sort((a, b) => b.Score - a.Score);
+
+            renderContent(allData);
+        }
+    });
+
+    function renderContent(data) {
+        const container = document.getElementById('potato-grid');
+        container.innerHTML = '';
+        
+        // Limpiar marcadores antiguos
+        markers.forEach(m => map.removeLayer(m));
+        markers = [];
+
+        data.forEach(row => {
+            // Crear la Card con diseño Rude
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                <span class="score">${row.Score}</span>
+                <span class="name">${row.Name}</span>
+                <span class="address">📍 ${row.Address}</span>
+                <a href="${row.Instagram}" target="_blank" class="btn-insta">Ver en Instagram</a>
+            `;
+            container.appendChild(card);
+
+            // Crear Marcador con el ICONO DE PATATAS
+            if (!isNaN(row.Latitude)) {
+                const marker = L.marker([row.Latitude, row.Longitude], { icon: potatoIcon })
+                    .addTo(map)
+                    .bindPopup(`
+                        <div style="color:black; font-family: sans-serif;">
+                            <b style="font-size:1.1rem">${row.Name}</b><br>
+                            <span style="color: #e67e22; font-weight:bold">Nota: ${row.Score}/10</span>
+                        </div>
+                    `);
+                markers.push(marker);
+            }
+        });
+    }
+
+    // Buscador en tiempo real
+    function filterCards() {
+        const term = document.getElementById('searchBox').value.toLowerCase();
+        const filtered = allData.filter(row => 
+            row.Name.toLowerCase().includes(term) || 
+            row.Address.toLowerCase().includes(term)
+        );
+        renderContent(filtered);
+    }
+</script>
