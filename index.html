@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rude Potatoes | The Ultimate List</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        :root {
+            --rude-yellow: #ffcc00;
+            --rude-dark: #1a1a1a;
+            --rude-card: #2d2d2d;
+            --text-light: #f4f4f4;
+        }
+
+        body { 
+            font-family: 'Impact', 'Arial Black', sans-serif; 
+            background: var(--rude-dark); 
+            color: var(--text-light);
+            margin: 0; padding: 0;
+        }
+
+        header { background: #000; padding: 40px 20px; text-align: center; border-bottom: 4px solid var(--rude-yellow); }
+        h1 { font-size: 3rem; margin: 0; color: var(--rude-yellow); text-transform: uppercase; }
+
+        /* BUSCADOR */
+        .search-container { text-align: center; padding: 20px; background: #222; }
+        #searchBox { 
+            padding: 12px 20px; width: 80%; max-width: 500px; 
+            border-radius: 25px; border: none; font-size: 1rem;
+            outline: none; border: 2px solid transparent; transition: 0.3s;
+        }
+        #searchBox:focus { border-color: var(--rude-yellow); }
+
+        /* MAPA */
+        #map { height: 400px; width: 100%; border-bottom: 4px solid var(--rude-yellow); }
+
+        /* GRID Y CARDS */
+        .grid { 
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
+            gap: 25px; padding: 40px; max-width: 1300px; margin: 0 auto; 
+        }
+        .card { 
+            background: var(--rude-card); border-radius: 0px; 
+            padding: 20px; position: relative; transition: 0.3s;
+            border: 1px solid #444;
+        }
+        .card:hover { transform: scale(1.03); border-color: var(--rude-yellow); }
+        
+        .score { 
+            position: absolute; top: -10px; left: -10px; 
+            background: var(--rude-yellow); color: #000; 
+            padding: 10px; font-size: 1.5rem; font-weight: bold;
+            transform: rotate(-5deg); box-shadow: 3px 3px 0px #000;
+        }
+
+        .name { font-size: 1.4rem; margin-top: 20px; display: block; color: var(--rude-yellow); }
+        .address { color: #bbb; font-family: sans-serif; font-size: 0.9rem; margin: 10px 0; display: block; }
+        
+        .btn-insta { 
+            display: inline-block; margin-top: 15px; background: transparent; 
+            color: var(--rude-yellow); border: 1px solid var(--rude-yellow);
+            padding: 8px 15px; text-decoration: none; font-family: sans-serif;
+            font-weight: bold; text-transform: uppercase; font-size: 0.7rem;
+        }
+        .btn-insta:hover { background: var(--rude-yellow); color: #000; }
+
+        .leaflet-popup-content-wrapper { background: var(--rude-dark); color: white; border: 1px solid var(--rude-yellow); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>RUDE POTATOES</h1>
+        <p>THE ULTIMATE LIST</p>
+    </header>
+
+    <div id="map"></div>
+
+    <div class="search-container">
+        <input type="text" id="searchBox" placeholder="Busca tu templo de la patata..." onkeyup="filterCards()">
+    </div>
+
+    <div id="potato-grid" class="grid">Cargando arsenal...</div>
+
+    <script>
+        const csvUrl = 'https://raw.githubusercontent.com/Rudepotatoes/Rudepotatoes/main/Rude%20Potatoes_%20The%20Ultimate%20List%20-%20Hoja%201.csv';
+        let allData = [];
+        let map;
+        let markers = [];
+
+        // Inicializar Mapa
+        map = L.map('map').setView([41.3851, 2.1734], 13); // Centrado en Barcelona
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+        Papa.parse(csvUrl, {
+            download: true,
+            header: true,
+            complete: function(results) {
+                // Limpiar comas por puntos en las coordenadas
+                allData = results.data.filter(row => row.Name).map(row => {
+                    row.Latitude = parseFloat(row.Latitude.replace(',', '.'));
+                    row.Longitude = parseFloat(row.Longitude.replace(',', '.'));
+                    return row;
+                });
+                renderContent(allData);
+            }
+        });
+
+        function renderContent(data) {
+            const container = document.getElementById('potato-grid');
+            container.innerHTML = '';
+            
+            // Limpiar marcadores antiguos
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+
+            data.forEach(row => {
+                // Crear Card
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <span class="score">${row.Score}</span>
+                    <span class="name">${row.Name}</span>
+                    <span class="address">📍 ${row.Address}</span>
+                    <a href="${row.Instagram}" target="_blank" class="btn-insta">Ver en Instagram</a>
+                `;
+                container.appendChild(card);
+
+                // Crear Marcador en Mapa
+                if(!isNaN(row.Latitude)) {
+                    const marker = L.marker([row.Latitude, row.Longitude])
+                        .addTo(map)
+                        .bindPopup(`<b>${row.Name}</b><br>Score: ${row.Score}`);
+                    markers.push(marker);
+                }
+            });
+        }
+
+        function filterCards() {
+            const term = document.getElementById('searchBox').value.toLowerCase();
+            const filtered = allData.filter(row => 
+                row.Name.toLowerCase().includes(term) || 
+                row.Address.toLowerCase().includes(term)
+            );
+            renderContent(filtered);
+        }
+    </script>
+</body>
+</html>
