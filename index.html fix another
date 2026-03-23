@@ -1,0 +1,53 @@
+<script>
+    const csvUrl = 'https://raw.githubusercontent.com/Rudepotatoes/Rudepotatoes/main/Rude%20Potatoes_%20The%20Ultimate%20List%20-%20Hoja%201.csv';
+    let allData = [];
+    let map;
+    let markers = [];
+
+    const potatoIcon = L.icon({
+        iconUrl: 'https://cdn-icons-png.flaticon.com/512/1046/1046786.png',
+        iconSize: [30, 30],
+        iconAnchor: [15, 30]
+    });
+
+    map = L.map('map').setView([41.387, 2.170], 13);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+    Papa.parse(csvUrl, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+            allData = results.data.filter(row => row.Bar).map(row => {
+                // Adaptamos tus columnas: Bar -> Name, Ciudad/Provincia -> Address
+                const name = row['Bar'] || "Local sin nombre";
+                const address = `${row['Ciudad'] || ''}, ${row['Provincia'] || ''}`;
+                
+                // Calculamos una nota media simple basada en tus columnas de puntuación
+                const sabor = parseFloat(row['P/Sabor']) || 0;
+                const textura = parseFloat(row['P/Textura']) || 0;
+                const score = ((sabor + textura) / 2).toFixed(1);
+
+                return { ...row, Name: name, Address: address, Score: score };
+            });
+
+            renderContent(allData);
+        }
+    });
+
+    function renderContent(data) {
+        const container = document.getElementById('potato-grid');
+        container.innerHTML = '';
+        data.forEach(row => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                <span class="score">${row.Score}</span>
+                <span class="name">${row.Name}</span>
+                <span class="address">📍 ${row.Address}</span>
+                <p style="font-size:0.8rem; color:#bbb;">${row.Notas || ''}</p>
+            `;
+            container.appendChild(card);
+        });
+    }
+</script>
